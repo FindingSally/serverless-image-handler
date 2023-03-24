@@ -10,7 +10,8 @@
     "prettier-format": "npx prettier --config .prettierrc.yml '**/*.ts' --write",
     "install:custom-resource": "cd ./custom-resource && npm run clean && npm ci",
     "install:image-handler": "cd ./image-handler && npm run clean && npm ci",
-    "install:dependencies": "npm run install:custom-resource && npm run install:image-handler"
+    "install:image-auth": "cd ./image-auth && npm run clean && npm ci",
+    "install:dependencies": "npm run install:custom-resource && npm run install:image-handler && npm run install:image-auth"
   },
   "devDependencies": {
     "@types/node": "^18.8.0",

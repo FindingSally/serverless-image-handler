@@ -10,13 +10,14 @@ import {
   CacheQueryStringBehavior,
   DistributionProps,
   IOrigin,
+  LambdaEdgeEventType,
   OriginRequestPolicy,
   OriginSslPolicy,
   PriceClass,
   ViewerProtocolPolicy,
 } from "aws-cdk-lib/aws-cloudfront";
 import { HttpOrigin } from "aws-cdk-lib/aws-cloudfront-origins";
-import { Policy, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { Effect, Policy, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
@@ -124,6 +125,10 @@ export class BackEnd extends Construct {
       },
     });
 
+    const imageAuthLambdaFunction = new NodejsFunction(scope, "ImageAuthLambdaFunction", {
+      entry: path.join(__dirname, "../../../image-auth/index.ts"),
+    });
+
     const imageHandlerLogGroup = new LogGroup(this, "ImageHandlerLogGroup", {
       logGroupName: `/aws/lambda/${imageHandlerLambdaFunction.functionName}`,
       retention: props.logRetentionPeriod as RetentionDays,
@@ -167,6 +172,34 @@ export class BackEnd extends Construct {
 
     const cloudFrontDistributionProps: DistributionProps = {
       comment: "Image Handler Distribution for Serverless Image Handler",
+      additionalBehaviors: {
+        "/protected/*": {
+          origin,
+          allowedMethods: AllowedMethods.ALLOW_GET_HEAD,
+          viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
+          originRequestPolicy,
+          cachePolicy,
+          edgeLambdas: [
+            {
+              eventType: LambdaEdgeEventType.VIEWER_REQUEST,
+              functionVersion: imageAuthLambdaFunction.currentVersion,
+            },
+          ],
+        },
+        "/private/*": {
+          origin,
+          allowedMethods: AllowedMethods.ALLOW_GET_HEAD,
+          viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
+          originRequestPolicy,
+          cachePolicy,
+          edgeLambdas: [
+            {
+              eventType: LambdaEdgeEventType.VIEWER_REQUEST,
+              functionVersion: imageAuthLambdaFunction.currentVersion,
+            },
+          ],
+        },
+      },
       defaultBehavior: {
         origin,
         allowedMethods: AllowedMethods.ALLOW_GET_HEAD,
