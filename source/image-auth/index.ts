@@ -1,9 +1,10 @@
 import { CloudFrontRequestHandler, CloudFrontResponse } from "aws-lambda";
 import { CognitoIdentityClient } from "@aws-sdk/client-cognito-identity";
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-provider-cognito-identity";
+import { GetParameterCommand, SSMClient } from "@aws-sdk/client-ssm";
 
-const IDENTITY_POOL_ID = "us-east-1:90f21488-8161-4d4d-a5f4-52f2fa0b96a4";
-const USER_POOL_ID = "cognito-idp.us-east-1.amazonaws.com/us-east-1_4OTT3Zvkt";
+const STACK_NAME = process.env.STACK_NAME;
+const ssm = new SSMClient({ region: "us-east-1" });
 
 export const handler: CloudFrontRequestHandler = async (_evt) => {
   const request = _evt.Records[0].cf.request;
@@ -14,6 +15,22 @@ export const handler: CloudFrontRequestHandler = async (_evt) => {
   if (!headers["authorization"]) {
     return unauthorized();
   }
+
+  const IDENTITY_POOL_ID = (
+    await ssm.send(
+      new GetParameterCommand({
+        Name: `${STACK_NAME}_IDENTITY_POOL_ID`,
+      })
+    )
+  ).Parameter.Value;
+
+  const USER_POOL_ID = (
+    await ssm.send(
+      new GetParameterCommand({
+        Name: `${STACK_NAME}_USER_POOL_ID`,
+      })
+    )
+  ).Parameter.Value;
 
   const cognitoidentity = new CognitoIdentityClient({
     credentials: fromCognitoIdentityPool({

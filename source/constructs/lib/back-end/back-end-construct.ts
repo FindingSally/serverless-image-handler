@@ -17,7 +17,7 @@ import {
   ViewerProtocolPolicy,
 } from "aws-cdk-lib/aws-cloudfront";
 import { HttpOrigin } from "aws-cdk-lib/aws-cloudfront-origins";
-import { Effect, Policy, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { Policy, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
@@ -28,6 +28,7 @@ import { CloudFrontToApiGatewayToLambda } from "@aws-solutions-constructs/aws-cl
 
 import { addCfnSuppressRules } from "../../utils/utils";
 import { SolutionConstructProps } from "../types";
+import { StringParameter } from "aws-cdk-lib/aws-ssm";
 
 export interface BackEndProps extends SolutionConstructProps {
   readonly solutionVersion: string;
@@ -36,6 +37,8 @@ export interface BackEndProps extends SolutionConstructProps {
   readonly logsBucket: IBucket;
   readonly uuid: string;
   readonly cloudFrontPriceClass: string;
+  readonly identityPoolId: string;
+  readonly userPoolId: string;
 }
 
 export class BackEnd extends Construct {
@@ -125,9 +128,26 @@ export class BackEnd extends Construct {
       },
     });
 
+    const identityPoolStringParameter = new StringParameter(this, "IdentityPoolIdStrinParameter", {
+      parameterName: `${Stack.of(this).stackName}_IDENTITY_POOL_ID`,
+      stringValue: props.identityPoolId,
+    });
+
+    const userPoolStringParameter = new StringParameter(this, "UserPoolIdStringParameter", {
+      parameterName: `${Stack.of(this).stackName}_USER_POOL_ID`,
+      stringValue: props.userPoolId,
+    });
+
     const imageAuthLambdaFunction = new NodejsFunction(scope, "ImageAuthLambdaFunction", {
       entry: path.join(__dirname, "../../../image-auth/index.ts"),
+      bundling: {
+        define: {
+          "process.env.STACK_NAME": JSON.stringify(Stack.of(this).stackName),
+        },
+      },
     });
+    identityPoolStringParameter.grantRead(imageAuthLambdaFunction);
+    userPoolStringParameter.grantRead(imageAuthLambdaFunction);
 
     const imageHandlerLogGroup = new LogGroup(this, "ImageHandlerLogGroup", {
       logGroupName: `/aws/lambda/${imageHandlerLambdaFunction.functionName}`,

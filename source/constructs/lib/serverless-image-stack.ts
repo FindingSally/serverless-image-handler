@@ -130,6 +130,18 @@ export class ServerlessImageHandlerStack extends Stack {
       default: PriceClass.PRICE_CLASS_ALL,
     });
 
+    const identityPoolIdParameter = new CfnParameter(this, "IdentityPoolIdParameter", {
+      type: "String",
+      description: "The Cognito Identity Pool ID to use for image authentication checks",
+      default: "",
+    });
+
+    const userPoolIdParameter = new CfnParameter(this, "UserPoolIdParameter", {
+      type: "String",
+      description: "The Cognito User Pool ID to use for image authentication checks",
+      default: "",
+    });
+
     const solutionMapping = new CfnMapping(this, "Solution", {
       mapping: {
         Config: {
@@ -177,6 +189,8 @@ export class ServerlessImageHandlerStack extends Stack {
       logsBucket: commonResources.logsBucket,
       uuid: commonResources.customResources.uuid,
       cloudFrontPriceClass: cloudFrontPriceClassParameter.valueAsString,
+      identityPoolId: identityPoolIdParameter.valueAsString,
+      userPoolId: userPoolIdParameter.valueAsString,
       ...solutionConstructProps,
     });
 
