@@ -8,9 +8,7 @@ const ssm = new SSMClient({ region: "us-east-1" });
 
 export const handler: CloudFrontRequestHandler = async (_evt) => {
   const request = _evt.Records[0].cf.request;
-  console.log(request);
   const headers = request.headers;
-  console.log(headers);
 
   if (!headers["authorization"]) {
     return unauthorized();
@@ -46,9 +44,7 @@ export const handler: CloudFrontRequestHandler = async (_evt) => {
 
   try {
     const credentials = await cognitoidentity.config.credentials();
-    console.log(credentials);
     const identity_ID = credentials.identityId;
-    console.log(identity_ID);
 
     if (request.uri.startsWith("/protected/")) {
       return request;
